@@ -16,6 +16,11 @@ import { Pizza } from "lucide-react";
 import Link from "next/link";
 import { Database } from "@/types/supabase";
 
+type MenuItem = Database["public"]["Tables"]["menu_items"]["Row"];
+type MenuCategory = Database["public"]["Tables"]["menu_categories"]["Row"] & {
+  menu_items: MenuItem[];
+};
+
 interface MenuCategoryPageProps {
   params: {
     categoryId: string;
@@ -26,7 +31,7 @@ function MenuItem({
   item,
   categoryId,
 }: {
-  item: Database["public"]["Tables"]["menu_items"]["Row"];
+  item: MenuItem;
   categoryId: string;
 }) {
   return (
@@ -88,18 +93,20 @@ export default async function MenuCategoryPage({
     notFound();
   }
 
+  const typedCategory = category as MenuCategory;
+
   return (
     <div className="min-h-screen bg-red-600">
       <div className="container mx-auto px-4 py-8">
         <div className="flex items-center justify-center gap-3 mb-8">
           <Pizza className="h-10 w-10 text-white" />
           <h1 className="text-4xl font-bold text-white text-center">
-            {category.name}
+            {typedCategory.name}
           </h1>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {category.menu_items?.map((item) => (
-            <MenuItem key={item.id} item={item} categoryId={category.id} />
+          {typedCategory.menu_items?.map((item) => (
+            <MenuItem key={item.id} item={item} categoryId={typedCategory.id} />
           ))}
         </div>
       </div>
