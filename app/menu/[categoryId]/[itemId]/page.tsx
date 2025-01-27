@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useCart } from "@/lib/cart";
@@ -45,66 +45,74 @@ export default function ItemPage({ params }: ItemPageProps) {
   const [loading, setLoading] = useState(true);
   const [totalPrice, setTotalPrice] = useState(0);
 
-  useEffect(() => {
-    async function loadItem() {
-      const supabase = createClient();
-      const { data: menuItem } = await supabase
-        .from("menu_items")
-        .select("*")
-        .eq("id", params.itemId)
-        .single();
+  const loadItem = useCallback(async () => {
+    const supabase = createClient();
+    if (!supabase) {
+      toast({
+        title: "Error",
+        description: "Could not connect to database",
+        variant: "destructive",
+      });
+      return;
+    }
+    const { data: menuItem } = await supabase
+      .from("menu_items")
+      .select("*")
+      .eq("id", params.itemId)
+      .single();
 
-      if (menuItem) {
-        setItem(menuItem);
-        setTotalPrice(menuItem.base_price);
+    if (menuItem) {
+      setItem(menuItem);
+      setTotalPrice(menuItem.base_price);
 
-        // Load sizes and customization options based on category
-        if (menuItem.category_id === "pizza") {
-          const { data: pizzaSizes } = await supabase
-            .from("pizza_sizes")
-            .select("*")
-            .order("size_inches");
+      // Load sizes and customization options based on category
+      if (menuItem.category_id === "pizza") {
+        const { data: pizzaSizes } = await supabase
+          .from("pizza_sizes")
+          .select("*")
+          .order("size_inches");
 
-          const { data: pizzaToppings } = await supabase
-            .from("toppings")
-            .select("*")
-            .eq("is_active", true)
-            .order("category");
+        const { data: pizzaToppings } = await supabase
+          .from("toppings")
+          .select("*")
+          .eq("is_active", true)
+          .order("category");
 
-          if (pizzaSizes?.length) {
-            setSizes(pizzaSizes);
-            setSelectedSize(pizzaSizes[0].id);
-          }
-          if (pizzaToppings) {
-            setToppings(pizzaToppings);
-          }
-        } else if (menuItem.category_id === "wings") {
-          const { data: quantities } = await supabase
-            .from("wing_quantities")
-            .select("*")
-            .order("pieces");
+        if (pizzaSizes?.length) {
+          setSizes(pizzaSizes);
+          setSelectedSize(pizzaSizes[0].id);
+        }
+        if (pizzaToppings) {
+          setToppings(pizzaToppings);
+        }
+      } else if (menuItem.category_id === "wings") {
+        const { data: quantities } = await supabase
+          .from("wing_quantities")
+          .select("*")
+          .order("pieces");
 
-          const { data: wingSauces } = await supabase
-            .from("wing_sauces")
-            .select("*")
-            .eq("is_active", true)
-            .order("heat_level");
+        const { data: wingSauces } = await supabase
+          .from("wing_sauces")
+          .select("*")
+          .eq("is_active", true)
+          .order("heat_level");
 
-          if (quantities?.length) {
-            setSizes(quantities);
-            setSelectedSize(quantities[0].id);
-          }
-          if (wingSauces) {
-            setSauces(wingSauces);
-          }
+        if (quantities?.length) {
+          setSizes(quantities);
+          setSelectedSize(quantities[0].id);
+        }
+        if (wingSauces) {
+          setSauces(wingSauces);
         }
       }
-
-      setLoading(false);
     }
 
+    setLoading(false);
+  }, [params.itemId, params.categoryId]);
+
+  useEffect(() => {
     loadItem();
-  }, [params.itemId]);
+  }, [loadItem]);
 
   useEffect(() => {
     if (!item || !selectedSize) return;

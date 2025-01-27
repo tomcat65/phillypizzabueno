@@ -27,6 +27,32 @@ interface MenuCategoryPageProps {
   };
 }
 
+// Add metadata generation
+export async function generateMetadata({ params }: MenuCategoryPageProps) {
+  const cookieStore = await cookies();
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name: string) {
+          return cookieStore.get(name)?.value;
+        },
+      },
+    }
+  );
+
+  const { data: category } = await supabase
+    .from("menu_categories")
+    .select("name")
+    .eq("id", params.categoryId)
+    .single();
+
+  return {
+    title: category?.name ?? "Menu Category",
+  };
+}
+
 function MenuItem({
   item,
   categoryId,
@@ -42,8 +68,10 @@ function MenuItem({
             src={item.image_url}
             alt={item.name}
             fill
-            className="object-cover group-hover:scale-105 transition-transform duration-300"
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+            className="object-cover group-hover:scale-105 transition-transform duration-300"
+            priority={false}
+            loading="lazy"
           />
         </div>
       )}
