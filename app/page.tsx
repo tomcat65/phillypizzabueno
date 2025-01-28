@@ -14,13 +14,6 @@ type MenuCategory = Database["public"]["Tables"]["menu_categories"]["Row"] & {
   menu_items: Database["public"]["Tables"]["menu_items"]["Row"][];
 };
 
-const categoryImages = {
-  pizza: "/images/pizza-category.jpg",
-  wings: "/images/wings-category.jpg",
-  sides: "/images/sides-category.jpg",
-  beverages: "/images/beverages-category.jpg",
-};
-
 export default async function HomePage() {
   const cookieStore = await cookies();
   const supabase = createServerClient(
@@ -57,18 +50,32 @@ export default async function HomePage() {
               <span className="relative inline-flex items-center px-3 py-1 font-bold rounded-md overflow-hidden">
                 <span className="absolute inset-0 bg-[linear-gradient(to_right,#008C45_33%,white_33%_66%,#CD212A_66%)] opacity-90"></span>
                 <span className="relative z-10 text-white text-shadow-sm">
-                  Italian
+                  Philly-Italian
                 </span>
               </span>{" "}
               pizzas,{" "}
               <span className="relative inline-flex items-center px-3 py-1 font-bold rounded-md overflow-hidden">
                 <span className="absolute inset-0">
-                  <div className="absolute inset-0 bg-[linear-gradient(180deg,#B31942_7.7%,white_7.7%,white_15.4%,#B31942_15.4%,#B31942_23.1%,white_23.1%,white_30.8%,#B31942_30.8%,#B31942_38.5%,white_38.5%,white_46.2%,#B31942_46.2%,#B31942_53.9%,white_53.9%)]"></div>
-                  <div className="absolute top-0 left-0 w-[40%] h-[53.9%] bg-[#041E42] flex items-center justify-center">
-                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,white_1px,transparent_1px)_repeat] [background-size:10px_10px] opacity-90"></div>
+                  <div className="absolute inset-0 bg-[repeating-linear-gradient(180deg,#B31942_7.69%,#B31942_15.38%,white_15.38%,white_23.07%)]" />
+                  <div className="absolute top-0 left-0 bg-[#041E42] h-[53.85%] w-[40%] z-10">
+                    <div
+                      className="absolute inset-0"
+                      style={{
+                        background: `radial-gradient(circle at 20% 20%, white 1.5px, transparent 2px),
+                                  radial-gradient(circle at 50% 20%, white 1.5px, transparent 2px),
+                                  radial-gradient(circle at 80% 20%, white 1.5px, transparent 2px),
+                                  radial-gradient(circle at 20% 50%, white 1.5px, transparent 2px),
+                                  radial-gradient(circle at 50% 50%, white 1.5px, transparent 2px),
+                                  radial-gradient(circle at 80% 50%, white 1.5px, transparent 2px),
+                                  radial-gradient(circle at 20% 80%, white 1.5px, transparent 2px),
+                                  radial-gradient(circle at 50% 80%, white 1.5px, transparent 2px),
+                                  radial-gradient(circle at 80% 80%, white 1.5px, transparent 2px)`,
+                        backgroundSize: "100% 100%",
+                      }}
+                    />
                   </div>
                 </span>
-                <span className="relative z-10 text-white font-extrabold [text-shadow:2px_2px_4px_rgba(0,0,0,0.8),0_0_4px_rgba(0,0,0,0.4)]">
+                <span className="relative z-20 text-white font-extrabold [text-shadow:1px_1px_0_#000,-1px_1px_0_#000,1px_-1px_0_#000,-1px_-1px_0_#000]">
                   American
                 </span>
               </span>{" "}
@@ -89,11 +96,7 @@ export default async function HomePage() {
                 <Card className="overflow-hidden border-2 hover:border-red-500 transition-colors">
                   <div className="relative h-64 w-full">
                     <Image
-                      src={
-                        categoryImages[
-                          category.id as keyof typeof categoryImages
-                        ] || "/images/default-category.jpg"
-                      }
+                      src={category.image_url}
                       alt={category.name}
                       fill
                       className="object-cover transition-transform duration-300 group-hover:scale-105"
