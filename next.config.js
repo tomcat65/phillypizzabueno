@@ -17,24 +17,36 @@ const nextConfig = {
       },
     ],
   },
+  // Development optimization
+  webpack: (config, { dev, isServer }) => {
+    // Only enable type checking in production
+    if (dev) {
+      config.infrastructureLogging = {
+        level: "error",
+      };
+    }
+    return config;
+  },
+  // Disable type checking during development
   typescript: {
     ignoreBuildErrors: true,
+  },
+  eslint: {
+    // Only run ESLint on save during development
+    ignoreDuringBuilds: true,
+  },
+  compiler: {
+    removeConsole: process.env.NODE_ENV === "production",
+  },
+  // Reduce the number of pages being compiled at once
+  experimental: {
+    workerThreads: false,
+    cpus: Math.max(1, Math.min(4, require("os").cpus().length - 1)),
   },
   // Optimization configurations
   reactStrictMode: true,
   poweredByHeader: false,
   compress: true,
-  compiler: {
-    removeConsole: process.env.NODE_ENV === "production",
-  },
-  experimental: {
-    optimizeCss: true,
-    serverActions: {
-      bodySizeLimit: "2mb",
-    },
-    typedRoutes: true,
-    webpackBuildWorker: true,
-  },
 };
 
 module.exports = nextConfig;

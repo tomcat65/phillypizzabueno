@@ -14,9 +14,13 @@ import { Button } from "@/components/ui/button";
 import { LoadingPage } from "@/components/ui/loading";
 import { Pizza } from "lucide-react";
 import Link from "next/link";
-import { Database } from "@/types/supabase";
+import type { Database } from "@/types/supabase";
 
-type MenuItem = Database["public"]["Tables"]["menu_items"]["Row"];
+type MenuItem = Database["public"]["Tables"]["menu_items"]["Row"] & {
+  image_url?: string | null;
+  description?: string | null;
+};
+
 type MenuCategory = Database["public"]["Tables"]["menu_categories"]["Row"] & {
   menu_items: MenuItem[];
 };
@@ -30,22 +34,26 @@ interface MenuCategoryPageProps {
 // Add metadata generation
 export async function generateMetadata({ params }: MenuCategoryPageProps) {
   const cookieStore = await cookies();
+  const cookieValue = cookieStore.get(
+    "sb-ixucbulispcqxbaqntpv-auth-token"
+  )?.value;
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
         get(name: string) {
-          return cookieStore.get(name)?.value;
+          return cookieValue;
         },
       },
     }
   );
 
+  const categoryId = await Promise.resolve(params.categoryId);
   const { data: category } = await supabase
     .from("menu_categories")
     .select("name")
-    .eq("id", params.categoryId)
+    .eq("id", categoryId)
     .single();
 
   return {
@@ -99,22 +107,26 @@ export default async function MenuCategoryPage({
   params,
 }: MenuCategoryPageProps) {
   const cookieStore = await cookies();
+  const cookieValue = cookieStore.get(
+    "sb-ixucbulispcqxbaqntpv-auth-token"
+  )?.value;
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
         get(name: string) {
-          return cookieStore.get(name)?.value;
+          return cookieValue;
         },
       },
     }
   );
 
+  const categoryId = await Promise.resolve(params.categoryId);
   const { data: category } = await supabase
     .from("menu_categories")
     .select("*, menu_items(*)")
-    .eq("id", params.categoryId)
+    .eq("id", categoryId)
     .single();
 
   if (!category) {
