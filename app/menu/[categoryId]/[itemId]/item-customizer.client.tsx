@@ -15,8 +15,32 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "@/components/ui/use-toast";
-import { useErrorBoundary } from "react-error-boundary";
+import { ErrorBoundary } from "react-error-boundary";
 import type { Database } from "@/types/supabase";
+
+function ErrorFallback({
+  error,
+  resetErrorBoundary,
+}: {
+  error: Error;
+  resetErrorBoundary: () => void;
+}) {
+  return (
+    <div
+      role="alert"
+      className="p-4 bg-red-50 border border-red-200 rounded-md"
+    >
+      <p className="text-red-800 font-medium">Something went wrong:</p>
+      <pre className="text-sm text-red-600 mt-2">{error.message}</pre>
+      <button
+        onClick={resetErrorBoundary}
+        className="mt-4 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+      >
+        Try again
+      </button>
+    </div>
+  );
+}
 
 type PizzaSize = Database["public"]["Tables"]["pizza_sizes"]["Row"];
 type WingQuantity = Database["public"]["Tables"]["wing_quantities"]["Row"];
@@ -41,7 +65,6 @@ export function ItemCustomizer({
 }: ItemCustomizerProps) {
   const router = useRouter();
   const { addItem } = useCart();
-  const { showBoundary } = useErrorBoundary();
   const [selectedSize, setSelectedSize] = useState<string>(sizes[0]?.id || "");
   const [selectedToppings, setSelectedToppings] = useState<string[]>([]);
   const [selectedSauces, setSelectedSauces] = useState<string[]>([]);
@@ -58,7 +81,9 @@ export function ItemCustomizer({
         throw new Error("Selected size not found");
       }
 
-      if (item.category_id === "pizza") {
+      // Calculate price based on category
+      if (item.category_id === "f85eeca1-7e83-47ab-9159-3708644b530f") {
+        // Pizza category
         const pizzaSize = size as PizzaSize;
         price *= pizzaSize.price_multiplier;
 
@@ -69,16 +94,22 @@ export function ItemCustomizer({
             price += topping.price * pizzaSize.price_multiplier;
           }
         });
-      } else if (item.category_id === "wings") {
+      } else if (item.category_id === "5089a01b-267d-4210-a9f3-d7f9205cb8d0") {
+        // Wings category
         const wingQuantity = size as WingQuantity;
         price = wingQuantity.price;
       }
 
       setTotalPrice(price);
     } catch (error) {
-      showBoundary(error);
+      toast({
+        title: "Error calculating price",
+        description:
+          error instanceof Error ? error.message : "An error occurred",
+        variant: "destructive",
+      });
     }
-  }, [item, selectedSize, selectedToppings, sizes, toppings, showBoundary]);
+  }, [item, selectedSize, selectedToppings, sizes, toppings]);
 
   const handleAddToCart = () => {
     try {
@@ -93,9 +124,9 @@ export function ItemCustomizer({
 
       const cartItem = {
         id: `${item.id}-${Date.now()}`,
-        type: item.category_id as "pizza" | "wings" | "sides" | "beverages",
+        type: item.category_id,
         name: item.name,
-        variant_id: selectedSize,
+        size_id: selectedSize,
         quantity: 1,
         customizations: {
           size,
@@ -118,131 +149,165 @@ export function ItemCustomizer({
         title: "Added to cart",
         description: `${item.name} has been added to your cart.`,
       });
-      router.push("/cart");
+      router.push(`/menu/${categoryId}`);
     } catch (error) {
-      if (error instanceof Error) {
-        toast({
-          title: "Error",
-          description: error.message,
-          variant: "destructive",
-        });
-      } else {
-        showBoundary(error);
-      }
+      toast({
+        title: "Error",
+        description:
+          error instanceof Error ? error.message : "An error occurred",
+        variant: "destructive",
+      });
     }
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{item.name}</CardTitle>
+    <Card className="max-w-4xl mx-auto">
+      <CardHeader className="relative">
+        <Button
+          variant="ghost"
+          className="absolute left-4 top-4"
+          onClick={() => router.push(`/menu/${categoryId}`)}
+        >
+          ← Back to Menu
+        </Button>
+        <CardTitle className="text-center pt-4">{item.name}</CardTitle>
+        <p className="text-center text-muted-foreground">{item.description}</p>
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Size Selection */}
-        <div className="space-y-4">
-          <Label>Size</Label>
-          <div className="grid gap-4">
-            {sizes.map((size) => {
-              const label =
-                item.category_id === "pizza"
-                  ? `${(size as PizzaSize).size_inches}" - $${(
-                      item.base_price * (size as PizzaSize).price_multiplier
-                    ).toFixed(2)}`
-                  : `${(size as WingQuantity).pieces}pc - $${(
-                      size as WingQuantity
-                    ).price.toFixed(2)}`;
-
-              return (
-                <div key={size.id} className="flex items-center space-x-2">
-                  <RadioGroup
-                    value={selectedSize}
-                    onValueChange={setSelectedSize}
+        {sizes.length > 0 && (
+          <div className="space-y-4">
+            <Label className="text-lg font-semibold">Select Size</Label>
+            <RadioGroup
+              value={selectedSize}
+              onValueChange={setSelectedSize}
+              className="grid gap-4"
+            >
+              {sizes.map((size) => (
+                <div key={size.id} className="flex items-center space-x-3">
+                  <RadioGroupItem value={size.id} id={size.id} />
+                  <Label
+                    htmlFor={size.id}
+                    className="flex justify-between w-full"
                   >
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value={size.id} id={size.id} />
-                      <Label htmlFor={size.id}>{label}</Label>
-                    </div>
-                  </RadioGroup>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Pizza Toppings */}
-        {item.category_id === "pizza" && toppings.length > 0 && (
-          <div className="space-y-4">
-            <Label>Toppings</Label>
-            <div className="grid gap-4 sm:grid-cols-2">
-              {toppings.map((topping) => (
-                <div key={topping.id} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={topping.id}
-                    checked={selectedToppings.includes(topping.id)}
-                    onCheckedChange={(checked) => {
-                      if (checked) {
-                        setSelectedToppings([...selectedToppings, topping.id]);
-                      } else {
-                        setSelectedToppings(
-                          selectedToppings.filter((id) => id !== topping.id)
-                        );
-                      }
-                    }}
-                  />
-                  <Label htmlFor={topping.id}>
-                    {topping.name} (+${topping.price.toFixed(2)})
+                    <span>
+                      {"size_inches" in size
+                        ? `${size.size_inches}" Pizza`
+                        : `${size.quantity} Wings`}
+                    </span>
+                    <span className="font-semibold">
+                      $
+                      {("price" in size
+                        ? size.price
+                        : item.base_price * (size as PizzaSize).price_multiplier
+                      ).toFixed(2)}
+                    </span>
                   </Label>
                 </div>
               ))}
-            </div>
+            </RadioGroup>
           </div>
         )}
 
-        {/* Wing Sauces */}
-        {item.category_id === "wings" && sauces.length > 0 && (
-          <div className="space-y-4">
-            <Label>Sauces</Label>
-            <div className="grid gap-4 sm:grid-cols-2">
-              {sauces.map((sauce) => (
-                <div key={sauce.id} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={sauce.id}
-                    checked={selectedSauces.includes(sauce.id)}
-                    onCheckedChange={(checked) => {
-                      const size = sizes.find(
-                        (s) => s.id === selectedSize
-                      ) as WingQuantity;
-                      if (checked) {
-                        if (selectedSauces.length < size.max_sauces) {
-                          setSelectedSauces([...selectedSauces, sauce.id]);
+        {/* Toppings Selection */}
+        {item.category_id === "f85eeca1-7e83-47ab-9159-3708644b530f" &&
+          toppings.length > 0 && (
+            <div className="space-y-4">
+              <Label className="text-lg font-semibold">Select Toppings</Label>
+              <div className="grid grid-cols-2 gap-4">
+                {toppings.map((topping) => (
+                  <div key={topping.id} className="flex items-center space-x-3">
+                    <Checkbox
+                      id={topping.id}
+                      checked={selectedToppings.includes(topping.id)}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          setSelectedToppings([
+                            ...selectedToppings,
+                            topping.id,
+                          ]);
                         } else {
-                          toast({
-                            title: "Maximum sauces reached",
-                            description: `You can only select ${size.max_sauces} sauces for this quantity.`,
-                            variant: "destructive",
-                          });
+                          setSelectedToppings(
+                            selectedToppings.filter((id) => id !== topping.id)
+                          );
                         }
-                      } else {
-                        setSelectedSauces(
-                          selectedSauces.filter((id) => id !== sauce.id)
-                        );
-                      }
-                    }}
-                  />
-                  <Label htmlFor={sauce.id}>
-                    {sauce.name}
-                    {sauce.heat_level > 0 &&
-                      ` (${"\u{1F336}".repeat(sauce.heat_level)})`}
-                  </Label>
-                </div>
-              ))}
+                      }}
+                    />
+                    <Label
+                      htmlFor={topping.id}
+                      className="flex justify-between w-full"
+                    >
+                      <span>{topping.name}</span>
+                      <span className="font-semibold">
+                        +${topping.price.toFixed(2)}
+                      </span>
+                    </Label>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
-        )}
+          )}
+
+        {/* Sauces Selection */}
+        {item.category_id === "5089a01b-267d-4210-a9f3-d7f9205cb8d0" &&
+          sauces.length > 0 && (
+            <div className="space-y-4">
+              <Label className="text-lg font-semibold">
+                Select Sauces {item.max_sauces && `(Max ${item.max_sauces})`}
+              </Label>
+              <div className="grid grid-cols-2 gap-4">
+                {sauces.map((sauce) => (
+                  <div key={sauce.id} className="flex items-center space-x-3">
+                    <Checkbox
+                      id={sauce.id}
+                      checked={selectedSauces.includes(sauce.id)}
+                      onCheckedChange={(checked) => {
+                        if (
+                          checked &&
+                          (!item.max_sauces ||
+                            selectedSauces.length < item.max_sauces)
+                        ) {
+                          setSelectedSauces([...selectedSauces, sauce.id]);
+                        } else if (!checked) {
+                          setSelectedSauces(
+                            selectedSauces.filter((id) => id !== sauce.id)
+                          );
+                        }
+                      }}
+                      disabled={
+                        !selectedSauces.includes(sauce.id) &&
+                        item.max_sauces &&
+                        selectedSauces.length >= item.max_sauces
+                      }
+                    />
+                    <Label
+                      htmlFor={sauce.id}
+                      className="flex justify-between w-full"
+                    >
+                      <span>{sauce.name}</span>
+                      {sauce.heat_level > 0 && (
+                        <span className="text-red-500">
+                          {"🌶️".repeat(sauce.heat_level)}
+                        </span>
+                      )}
+                    </Label>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
       </CardContent>
-      <CardFooter className="flex justify-between">
-        <div className="text-lg font-bold">Total: ${totalPrice.toFixed(2)}</div>
-        <Button onClick={handleAddToCart}>Add to Cart</Button>
+      <CardFooter className="flex justify-between items-center">
+        <div className="text-2xl font-bold">
+          Total: ${totalPrice.toFixed(2)}
+        </div>
+        <Button
+          onClick={handleAddToCart}
+          className="bg-red-600 hover:bg-red-700 text-white"
+          disabled={!selectedSize}
+        >
+          Add to Cart
+        </Button>
       </CardFooter>
     </Card>
   );

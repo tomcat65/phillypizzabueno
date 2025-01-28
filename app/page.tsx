@@ -41,9 +41,11 @@ export default async function HomePage() {
         <div className="container mx-auto px-4 py-12">
           <div className="text-center mb-12">
             <div className="flex justify-center items-center gap-3 mb-4">
-              <Pizza className="h-12 w-12 text-red-600" />
-              <h1 className="text-5xl font-bold text-gray-900">Our Menu</h1>
-              <UtensilsCrossed className="h-12 w-12 text-red-600" />
+              <Pizza className="h-12 w-12 text-[#E63946]" />
+              <h1 className="text-5xl font-bold bg-gradient-to-r from-[#E63946] to-[#0074D9] text-transparent bg-clip-text">
+                PhillyPizzaBueno
+              </h1>
+              <UtensilsCrossed className="h-12 w-12 text-[#E63946]" />
             </div>
             <p className="text-xl text-gray-600 max-w-2xl mx-auto">
               Discover our delicious selection of authentic{" "}
@@ -100,7 +102,7 @@ export default async function HomePage() {
           </div>
 
           <div className="text-center mb-12">
-            <h1 className="text-4xl font-bold mb-4">Our Menu</h1>
+            <h1 className="text-4xl font-bold mb-4 text-[#0074D9]">Our Menu</h1>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 max-w-7xl mx-auto">

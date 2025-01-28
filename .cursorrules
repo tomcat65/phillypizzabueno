@@ -2,7 +2,7 @@ Start all chats with 🤖
 
 ## Stack
 -React
--Next.js
+-Next.js version 15.1.6
 -TailwindCSS
 -Typescript
 -Supabase
@@ -11,6 +11,7 @@ Start all chats with 🤖
 use shadcn@latest do not use shadcn/ui or shadcn-ui
 
 -TailwindCSS
+- remember we are developing in windows
 don't run concurrent commands in terminal with && always run them one by one
 Here is a comprehensive prompt for developing the pizza shop online ordering system:
 

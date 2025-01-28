@@ -49,11 +49,10 @@ export async function generateMetadata({ params }: MenuCategoryPageProps) {
     }
   );
 
-  const categoryId = await Promise.resolve(params.categoryId);
   const { data: category } = await supabase
     .from("menu_categories")
     .select("name")
-    .eq("id", categoryId)
+    .eq("id", params.categoryId)
     .single();
 
   return {
@@ -103,9 +102,12 @@ function MenuItem({
   );
 }
 
-export default async function MenuCategoryPage({
+export default async function CategoryPage({
   params,
-}: MenuCategoryPageProps) {
+}: {
+  params: { categoryId: string };
+}) {
+  // Destructure params after they are resolved
   const cookieStore = await cookies();
   const cookieValue = cookieStore.get(
     "sb-ixucbulispcqxbaqntpv-auth-token"
@@ -122,12 +124,19 @@ export default async function MenuCategoryPage({
     }
   );
 
-  const categoryId = await Promise.resolve(params.categoryId);
-  const { data: category } = await supabase
+  // Move destructuring after params are resolved
+  const categoryId = params.categoryId;
+
+  const { data: category, error } = await supabase
     .from("menu_categories")
     .select("*, menu_items(*)")
     .eq("id", categoryId)
     .single();
+
+  if (error) {
+    console.error("Error fetching category:", error);
+    notFound();
+  }
 
   if (!category) {
     notFound();
@@ -144,11 +153,17 @@ export default async function MenuCategoryPage({
             {typedCategory.name}
           </h1>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {typedCategory.menu_items?.map((item) => (
-            <MenuItem key={item.id} item={item} categoryId={typedCategory.id} />
-          ))}
-        </div>
+        <Suspense fallback={<LoadingPage />}>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {typedCategory.menu_items?.map((item) => (
+              <MenuItem
+                key={item.id}
+                item={item}
+                categoryId={typedCategory.id}
+              />
+            ))}
+          </div>
+        </Suspense>
       </div>
     </div>
   );
