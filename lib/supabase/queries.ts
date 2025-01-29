@@ -1,32 +1,48 @@
-import { createClient } from "./client";
+import { createServerClient } from "./server";
+
+export async function testConnection() {
+  try {
+    const supabase = createServerClient();
+    const { data, error } = await supabase
+      .from("menu_categories")
+      .select("count")
+      .single();
+
+    if (error) throw error;
+    return { success: true, message: "Successfully connected to Supabase" };
+  } catch (error) {
+    console.error("Supabase connection test failed:", error);
+    return { success: false, message: "Failed to connect to Supabase", error };
+  }
+}
 
 export async function getActiveCategories() {
-  const supabase = createClient();
-  return await supabase.from("active_categories").select("*");
+  const supabase = createServerClient();
+  return await supabase.from("menu_categories").select("*");
 }
 
 export async function getActiveSpecials() {
-  const supabase = createClient();
+  const supabase = createServerClient();
   return await supabase.from("active_specials").select("*");
 }
 
 export async function getAvailableBeverages() {
-  const supabase = createClient();
+  const supabase = createServerClient();
   return await supabase.from("available_beverages").select("*");
 }
 
 export async function getCurrentPricingOverview() {
-  const supabase = createClient();
+  const supabase = createServerClient();
   return await supabase.from("current_pricing_overview").select("*");
 }
 
 export async function getMenuSystemOverview() {
-  const supabase = createClient();
+  const supabase = createServerClient();
   return await supabase.from("menu_system_overview").select("*");
 }
 
 export async function getSpecialMenuItems() {
-  const supabase = createClient();
+  const supabase = createServerClient();
   return await supabase.from("special_menu_items").select("*");
 }
 

@@ -1,11 +1,10 @@
-import { createServerClient } from "@supabase/ssr";
+import { createServerClient } from "@/lib/supabase/server";
 import type { Database } from "@/types/supabase";
-import { cookies } from "next/headers";
-import { ItemCustomizer } from "./item-customizer.client";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { ErrorBoundary } from "react-error-boundary";
 import ItemLoading from "./loading";
+import { ItemCustomizer } from "./item-customizer.client";
 import { ItemError } from "./error-boundary.client";
 
 type PizzaSize = Database["public"]["Tables"]["pizza_sizes"]["Row"];
@@ -20,7 +19,6 @@ export default async function ItemPage({
   params: { categoryId: string; itemId: string };
 }) {
   try {
-    // Move destructuring after params are resolved
     const categoryId = params.categoryId;
     const itemId = params.itemId;
 
@@ -48,32 +46,8 @@ export default async function ItemPage({
   }
 }
 
-async function getSupabase() {
-  return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        async get(name: string) {
-          const cookieStore = await cookies();
-          const cookie = cookieStore.get(name);
-          return cookie?.value ?? "";
-        },
-        async set(name: string, value: string) {
-          const cookieStore = await cookies();
-          cookieStore.set(name, value);
-        },
-        async remove(name: string) {
-          const cookieStore = await cookies();
-          cookieStore.delete(name);
-        },
-      },
-    }
-  );
-}
-
 async function getItemData(itemId: string) {
-  const supabase = await getSupabase();
+  const supabase = await createServerClient();
   const { data: item, error } = await supabase
     .from("menu_items")
     .select("*, category:menu_categories(id, name)")
@@ -87,7 +61,7 @@ async function getItemData(itemId: string) {
 }
 
 async function getCustomizationOptions(item: MenuItem) {
-  const supabase = await getSupabase();
+  const supabase = await createServerClient();
 
   const [sizes, toppings, sauces] = await Promise.all([
     // Get sizes based on category

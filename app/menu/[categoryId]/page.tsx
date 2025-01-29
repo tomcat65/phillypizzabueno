@@ -1,6 +1,5 @@
 import { Suspense } from "react";
-import { createServerClient } from "@supabase/ssr";
-import { cookies } from "next/headers";
+import { createServerClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import {
@@ -33,21 +32,7 @@ interface MenuCategoryPageProps {
 
 // Add metadata generation
 export async function generateMetadata({ params }: MenuCategoryPageProps) {
-  const cookieStore = await cookies();
-  const cookieValue = cookieStore.get(
-    "sb-ixucbulispcqxbaqntpv-auth-token"
-  )?.value;
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return cookieValue;
-        },
-      },
-    }
-  );
+  const supabase = await createServerClient();
 
   const { data: category } = await supabase
     .from("menu_categories")
@@ -107,24 +92,7 @@ export default async function CategoryPage({
 }: {
   params: { categoryId: string };
 }) {
-  // Destructure params after they are resolved
-  const cookieStore = await cookies();
-  const cookieValue = cookieStore.get(
-    "sb-ixucbulispcqxbaqntpv-auth-token"
-  )?.value;
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return cookieValue;
-        },
-      },
-    }
-  );
-
-  // Move destructuring after params are resolved
+  const supabase = await createServerClient();
   const categoryId = params.categoryId;
 
   const { data: category, error } = await supabase
