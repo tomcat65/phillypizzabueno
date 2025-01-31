@@ -1,7 +1,8 @@
-import { testConnection } from "@/lib/supabase/queries";
+import { testConnection } from "@/lib/supabase/queries"
+import type { ReactNode } from "react"
 
 export default async function TestPage() {
-  const result = await testConnection();
+  const result = await testConnection()
 
   return (
     <div className="container mx-auto p-8">
@@ -21,5 +22,5 @@ export default async function TestPage() {
         )}
       </div>
     </div>
-  );
+  )
 }

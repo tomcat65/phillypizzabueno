@@ -14,25 +14,14 @@ import {
   Instagram,
   Facebook,
   Music2,
-  Sparkles,
 } from "lucide-react";
 import { MenuStyles } from "./components/menu-styles";
+import { SpecialsSection } from "./components/specials-section";
 import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 
 type MenuCategory = Database["public"]["Tables"]["menu_categories"]["Row"] & {
   menu_items: Database["public"]["Tables"]["menu_items"]["Row"][];
-};
-
-type Special = {
-  id: string;
-  name: string | null;
-  description: string | null;
-  special_price: number | null;
-  base_item_name: string | null;
-  discount_percentage: number | null;
-  start_date: string | null;
-  end_date: string | null;
 };
 
 export default async function HomePage() {
@@ -145,61 +134,7 @@ export default async function HomePage() {
 
             {/* Specials Section */}
             {specials && specials.length > 0 && (
-              <div className="mb-16">
-                <div className="text-center mb-8">
-                  <div className="flex items-center justify-center gap-2">
-                    <Sparkles className="h-6 w-6 text-yellow-500" />
-                    <h2 className="text-3xl font-bold text-[#E63946]">
-                      Today's Specials
-                    </h2>
-                    <Sparkles className="h-6 w-6 text-yellow-500" />
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-7xl mx-auto">
-                  {specials.map((special) => (
-                    <div
-                      key={special.id}
-                      className="bg-white rounded-lg shadow-lg overflow-hidden transform transition-all duration-300 hover:-translate-y-1 hover:shadow-xl"
-                    >
-                      <div className="p-6">
-                        <h3 className="text-xl font-bold text-gray-900 mb-2">
-                          {special.name}
-                        </h3>
-                        <p className="text-gray-600 mb-4">
-                          {special.description}
-                        </p>
-                        <div className="flex justify-between items-center">
-                          <div className="flex items-center gap-2">
-                            {special.special_price && (
-                              <span className="text-2xl font-bold text-red-600">
-                                ${special.special_price.toFixed(2)}
-                              </span>
-                            )}
-                            {special.discount_percentage && (
-                              <span className="bg-red-100 text-red-700 px-2 py-1 rounded-full text-sm font-medium">
-                                {special.discount_percentage}% OFF
-                              </span>
-                            )}
-                          </div>
-                          <Link
-                            href={`/menu/specials/${special.id}`}
-                            className="inline-flex items-center text-red-600 hover:text-red-700 font-medium"
-                          >
-                            Order Now
-                            <span className="ml-2">→</span>
-                          </Link>
-                        </div>
-                        {special.end_date && (
-                          <div className="mt-4 text-sm text-gray-500">
-                            Valid until{" "}
-                            {new Date(special.end_date).toLocaleDateString()}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
+              <SpecialsSection specials={specials} />
             )}
 
             <div className="text-center mb-12">

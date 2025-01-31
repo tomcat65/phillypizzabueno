@@ -11,13 +11,24 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { LoadingPage } from "@/components/ui/loading";
-import { Pizza } from "lucide-react";
+import {
+  Pizza,
+  UtensilsCrossed,
+  Instagram,
+  Facebook,
+  Music2,
+} from "lucide-react";
 import Link from "next/link";
 import type { Database } from "@/types/supabase";
 
 type MenuItem = Database["public"]["Tables"]["menu_items"]["Row"] & {
   image_url?: string | null;
   description?: string | null;
+  sizes?: Array<{
+    id: string;
+    size_inches?: number;
+    price_modifier?: number;
+  }>;
 };
 
 type MenuCategory = Database["public"]["Tables"]["menu_categories"]["Row"] & {
@@ -30,9 +41,8 @@ interface MenuCategoryPageProps {
   };
 }
 
-// Add metadata generation
 export async function generateMetadata({ params }: MenuCategoryPageProps) {
-  const supabase = await createServerClient();
+  const supabase = createServerClient();
 
   const { data: category } = await supabase
     .from("menu_categories")
@@ -52,10 +62,12 @@ function MenuItem({
   item: MenuItem;
   categoryId: string;
 }) {
+  const isPizza = categoryId === "f85eeca1-7e83-47ab-9159-3708644b530f";
+
   return (
-    <Card className="overflow-hidden group hover:shadow-lg transition-all duration-300 bg-white">
+    <div className="group bg-white rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-all duration-300">
       {item.image_url && (
-        <div className="relative h-48 w-full bg-gray-100">
+        <div className="relative h-56 w-full">
           <Image
             src={item.image_url}
             alt={item.name}
@@ -65,25 +77,49 @@ function MenuItem({
             priority={false}
             loading="lazy"
           />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
         </div>
       )}
-      <CardHeader className="bg-red-500 text-white">
-        <CardTitle className="text-xl">{item.name}</CardTitle>
-        <CardDescription className="text-red-100">
-          {item.description}
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="p-4 bg-white">
-        <div className="flex justify-between items-center">
-          <span className="text-xl font-bold text-red-600">
+      <div className="p-6">
+        <h3 className="text-2xl font-serif text-gray-900 mb-3">{item.name}</h3>
+        {item.description && (
+          <p className="text-gray-600 mb-4 line-clamp-2">{item.description}</p>
+        )}
+
+        {/* Size and Price Information */}
+        {isPizza && item.sizes && item.sizes.length > 0 ? (
+          <div className="grid grid-cols-3 gap-2">
+            {item.sizes.map((size) => (
+              <div
+                key={size.id}
+                className="bg-gray-50 p-2 rounded-lg text-center hover:bg-gray-100 transition-colors"
+              >
+                <div className="text-sm font-medium text-gray-600">
+                  {size.size_inches}"
+                </div>
+                <div className="text-base font-bold text-red-700">
+                  ${(item.base_price * (size.price_modifier || 1)).toFixed(2)}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-xl font-medium text-red-700 mb-4">
             ${item.base_price.toFixed(2)}
-          </span>
-          <Button asChild className="bg-red-600 hover:bg-red-700 text-white">
-            <Link href={`/menu/${categoryId}/${item.id}`}>Customize</Link>
-          </Button>
+          </div>
+        )}
+
+        <div className="mt-4 flex justify-end">
+          <Link
+            href={`/menu/${categoryId}/${item.id}`}
+            className="inline-flex items-center text-red-700 hover:text-red-800 font-medium transition-colors"
+          >
+            Customize
+            <span className="ml-2">→</span>
+          </Link>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
 
@@ -92,47 +128,101 @@ export default async function CategoryPage({
 }: {
   params: { categoryId: string };
 }) {
-  const supabase = await createServerClient();
-  const categoryId = params.categoryId;
+  const supabase = createServerClient();
 
-  const { data: category, error } = await supabase
+  // Fetch category with menu items
+  const { data: category, error: categoryError } = await supabase
     .from("menu_categories")
     .select("*, menu_items(*)")
-    .eq("id", categoryId)
+    .eq("id", params.categoryId)
     .single();
 
-  if (error) {
-    console.error("Error fetching category:", error);
+  if (categoryError || !category) {
+    console.error("Error fetching category:", categoryError);
     notFound();
   }
 
-  if (!category) {
-    notFound();
+  // Fetch sizes for pizza category
+  let itemsWithSizes = [...category.menu_items];
+  if (params.categoryId === "f85eeca1-7e83-47ab-9159-3708644b530f") {
+    // Pizza category - fetch sizes with price modifiers
+    const { data: pizzaSizes } = await supabase
+      .from("pizza_sizes")
+      .select("id, size_inches, price_modifier")
+      .order("size_inches");
+
+    if (pizzaSizes) {
+      itemsWithSizes = category.menu_items.map((item) => ({
+        ...item,
+        sizes: pizzaSizes,
+      }));
+    }
   }
 
-  const typedCategory = category as MenuCategory;
+  const typedCategory = {
+    ...category,
+    menu_items: itemsWithSizes,
+  } as MenuCategory;
 
   return (
-    <div className="min-h-screen bg-red-600">
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex items-center justify-center gap-3 mb-8">
-          <Pizza className="h-10 w-10 text-white" />
-          <h1 className="text-4xl font-bold text-white text-center">
-            {typedCategory.name}
-          </h1>
+    <div className="min-h-screen bg-gray-50 flex flex-col">
+      <div className="flex-grow py-8 px-4">
+        <div className="max-w-7xl mx-auto">
+          <Suspense fallback={<LoadingPage />}>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {typedCategory.menu_items?.map((item) => (
+                <MenuItem
+                  key={item.id}
+                  item={item}
+                  categoryId={params.categoryId}
+                />
+              ))}
+            </div>
+          </Suspense>
         </div>
-        <Suspense fallback={<LoadingPage />}>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {typedCategory.menu_items?.map((item) => (
-              <MenuItem
-                key={item.id}
-                item={item}
-                categoryId={typedCategory.id}
-              />
-            ))}
-          </div>
-        </Suspense>
       </div>
+
+      {/* Footer */}
+      <footer className="bg-red-700 text-white py-12">
+        <div className="container mx-auto px-4">
+          <div className="flex flex-col items-center">
+            <div className="text-2xl font-bold mb-6">@PhillyPizzaBueno</div>
+            <div className="flex gap-6 mb-8">
+              <a
+                href="https://instagram.com/phillypizzabueno"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-red-200 transition-colors"
+                aria-label="Follow us on Instagram"
+              >
+                <Instagram size={24} />
+              </a>
+              <a
+                href="https://facebook.com/phillypizzabueno"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-red-200 transition-colors"
+                aria-label="Follow us on Facebook"
+              >
+                <Facebook size={24} />
+              </a>
+              <a
+                href="https://tiktok.com/@phillypizzabueno"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-red-200 transition-colors"
+                aria-label="Follow us on TikTok"
+              >
+                <Music2 size={24} />
+              </a>
+            </div>
+            <div className="text-sm text-red-200">
+              © {new Date().getFullYear()} PhillyPizzaBueno. All rights
+              reserved.
+            </div>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
