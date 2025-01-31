@@ -46,6 +46,39 @@ export async function getSpecialMenuItems() {
   return await supabase.from("special_menu_items").select("*");
 }
 
+export async function getCombinedSpecialsData() {
+  const supabase = await createServerClient();
+
+  const { data, error } = await supabase
+    .from("menu_specials")
+    .select(
+      `
+      id,
+      special_price,
+      discount_percentage,
+      start_date,
+      end_date,
+      is_active,
+      menu_items (
+        id,
+        name,
+        description,
+        base_price,
+        category_id
+      )
+    `
+    )
+    .eq("is_active", true)
+    .order("start_date", { ascending: true });
+
+  if (error) {
+    console.error("Error fetching combined specials:", error);
+    throw error;
+  }
+
+  return data;
+}
+
 // Helper function to get all menu data at once
 export async function getAllMenuData() {
   const [
