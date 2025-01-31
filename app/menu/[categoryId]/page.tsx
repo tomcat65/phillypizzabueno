@@ -20,6 +20,8 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import type { Database } from "@/types/supabase";
+import { PizzaItem } from "./components/pizza-item";
+import { DefaultItem } from "./components/default-item";
 
 type MenuItem = Database["public"]["Tables"]["menu_items"]["Row"] & {
   image_url?: string | null;
@@ -123,14 +125,135 @@ function MenuItem({
   );
 }
 
+type BasePizza = {
+  id: string;
+  name: string;
+  description: string;
+  image_url: string;
+  menu_item_id: string;
+};
+
+type PizzaSize = {
+  id: string;
+  size_inches: number;
+  price_modifier: number;
+};
+
+type PizzaVariant = {
+  id: string;
+  base_pizza_id: string;
+  size_id: string;
+  base_price: number;
+};
+
 export default async function CategoryPage({
   params,
 }: {
   params: { categoryId: string };
 }) {
   const supabase = createServerClient();
+  const isPizzaCategory =
+    params.categoryId === "f85eeca1-7e83-47ab-9159-3708644b530f";
 
-  // Fetch category with menu items
+  if (isPizzaCategory) {
+    // Fetch all pizza-related data
+    const [basePizzasResult, sizesResult, variantsResult] = await Promise.all([
+      supabase.from("base_pizzas").select("*"),
+      supabase.from("pizza_sizes").select("*").order("size_inches"),
+      supabase.from("pizza_variants").select("*"),
+    ]);
+
+    if (!basePizzasResult.data || !sizesResult.data || !variantsResult.data) {
+      console.error("Error fetching pizza data");
+      notFound();
+    }
+
+    // Process the data to create a complete pizza menu
+    const pizzas = basePizzasResult.data.map((basePizza) => {
+      // Get all variants for this base pizza
+      const pizzaVariants = variantsResult.data
+        .filter((variant) => variant.base_pizza_id === basePizza.id)
+        .map((variant) => {
+          // Find the size for this variant
+          const size = sizesResult.data.find(
+            (size) => size.id === variant.size_id
+          );
+          return {
+            ...variant,
+            size,
+          };
+        });
+
+      return {
+        ...basePizza,
+        variants: pizzaVariants,
+      };
+    });
+
+    return (
+      <div className="min-h-screen bg-gray-50 flex flex-col">
+        <div className="flex-grow py-8 px-4">
+          <div className="max-w-7xl mx-auto">
+            <Suspense fallback={<LoadingPage />}>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {pizzas.map((pizza) => (
+                  <PizzaItem
+                    key={pizza.id}
+                    pizza={pizza}
+                    categoryId={params.categoryId}
+                  />
+                ))}
+              </div>
+            </Suspense>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <footer className="bg-red-700 text-white py-12">
+          <div className="container mx-auto px-4">
+            <div className="flex flex-col items-center">
+              <div className="text-2xl font-bold mb-6">@PhillyPizzaBueno</div>
+              <div className="flex gap-6 mb-8">
+                <a
+                  href="https://instagram.com/phillypizzabueno"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-red-200 transition-colors"
+                  aria-label="Follow us on Instagram"
+                >
+                  <Instagram size={24} />
+                </a>
+                <a
+                  href="https://facebook.com/phillypizzabueno"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-red-200 transition-colors"
+                  aria-label="Follow us on Facebook"
+                >
+                  <Facebook size={24} />
+                </a>
+                <a
+                  href="https://tiktok.com/@phillypizzabueno"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-red-200 transition-colors"
+                  aria-label="Follow us on TikTok"
+                >
+                  <Music2 size={24} />
+                </a>
+              </div>
+              <div className="text-sm text-red-200">
+                © {new Date().getFullYear()} PhillyPizzaBueno. All rights
+                reserved.
+              </div>
+            </div>
+          </div>
+        </footer>
+      </div>
+    );
+  }
+
+  // For non-pizza categories, fetch regular menu items
   const { data: category, error: categoryError } = await supabase
     .from("menu_categories")
     .select("*, menu_items(*)")
@@ -142,36 +265,14 @@ export default async function CategoryPage({
     notFound();
   }
 
-  // Fetch sizes for pizza category
-  let itemsWithSizes = [...category.menu_items];
-  if (params.categoryId === "f85eeca1-7e83-47ab-9159-3708644b530f") {
-    // Pizza category - fetch sizes with price modifiers
-    const { data: pizzaSizes } = await supabase
-      .from("pizza_sizes")
-      .select("id, size_inches, price_modifier")
-      .order("size_inches");
-
-    if (pizzaSizes) {
-      itemsWithSizes = category.menu_items.map((item) => ({
-        ...item,
-        sizes: pizzaSizes,
-      }));
-    }
-  }
-
-  const typedCategory = {
-    ...category,
-    menu_items: itemsWithSizes,
-  } as MenuCategory;
-
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       <div className="flex-grow py-8 px-4">
         <div className="max-w-7xl mx-auto">
           <Suspense fallback={<LoadingPage />}>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {typedCategory.menu_items?.map((item) => (
-                <MenuItem
+              {category.menu_items?.map((item) => (
+                <DefaultItem
                   key={item.id}
                   item={item}
                   categoryId={params.categoryId}
@@ -181,48 +282,6 @@ export default async function CategoryPage({
           </Suspense>
         </div>
       </div>
-
-      {/* Footer */}
-      <footer className="bg-red-700 text-white py-12">
-        <div className="container mx-auto px-4">
-          <div className="flex flex-col items-center">
-            <div className="text-2xl font-bold mb-6">@PhillyPizzaBueno</div>
-            <div className="flex gap-6 mb-8">
-              <a
-                href="https://instagram.com/phillypizzabueno"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="hover:text-red-200 transition-colors"
-                aria-label="Follow us on Instagram"
-              >
-                <Instagram size={24} />
-              </a>
-              <a
-                href="https://facebook.com/phillypizzabueno"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="hover:text-red-200 transition-colors"
-                aria-label="Follow us on Facebook"
-              >
-                <Facebook size={24} />
-              </a>
-              <a
-                href="https://tiktok.com/@phillypizzabueno"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="hover:text-red-200 transition-colors"
-                aria-label="Follow us on TikTok"
-              >
-                <Music2 size={24} />
-              </a>
-            </div>
-            <div className="text-sm text-red-200">
-              © {new Date().getFullYear()} PhillyPizzaBueno. All rights
-              reserved.
-            </div>
-          </div>
-        </div>
-      </footer>
     </div>
   );
 }
