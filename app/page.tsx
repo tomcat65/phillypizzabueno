@@ -6,7 +6,16 @@ import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LoadingPage } from "@/components/ui/loading";
-import { Pizza, UtensilsCrossed, Leaf, Heart } from "lucide-react";
+import {
+  Pizza,
+  UtensilsCrossed,
+  Leaf,
+  Heart,
+  Instagram,
+  Facebook,
+  Music2,
+  Sparkles,
+} from "lucide-react";
 import { MenuStyles } from "./components/menu-styles";
 import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
@@ -15,20 +24,43 @@ type MenuCategory = Database["public"]["Tables"]["menu_categories"]["Row"] & {
   menu_items: Database["public"]["Tables"]["menu_items"]["Row"][];
 };
 
+type Special = {
+  id: string;
+  name: string | null;
+  description: string | null;
+  special_price: number | null;
+  base_item_name: string | null;
+  discount_percentage: number | null;
+  start_date: string | null;
+  end_date: string | null;
+};
+
 export default async function HomePage() {
   try {
     const cookieStore = cookies();
     const supabase = await createServerClient();
 
-    const { data: categories, error } = await supabase
-      .from("menu_categories")
-      .select("*, menu_items(*)")
-      .eq("is_active", true)
-      .order("display_order");
+    // Fetch both categories and specials in parallel
+    const [categoriesResponse, specialsResponse] = await Promise.all([
+      supabase
+        .from("menu_categories")
+        .select("*, menu_items(*)")
+        .eq("is_active", true)
+        .order("display_order"),
+      supabase.from("active_specials").select("*"),
+    ]);
 
-    if (error) {
-      console.error("Error fetching categories:", error);
+    const { data: categories, error: categoriesError } = categoriesResponse;
+    const { data: specials, error: specialsError } = specialsResponse;
+
+    if (categoriesError) {
+      console.error("Error fetching categories:", categoriesError);
       throw new Error("Failed to load menu categories");
+    }
+
+    if (specialsError) {
+      console.error("Error fetching specials:", specialsError);
+      throw new Error("Failed to load specials");
     }
 
     if (!categories || categories.length === 0) {
@@ -46,9 +78,9 @@ export default async function HomePage() {
 
     return (
       <Suspense fallback={<LoadingPage />}>
-        <main className="min-h-screen bg-gradient-to-b from-red-50 to-white">
+        <main className="min-h-screen bg-gradient-to-b from-red-50 to-white flex flex-col">
           <MenuStyles />
-          <div className="container mx-auto px-4 py-12">
+          <div className="container mx-auto px-4 py-12 flex-grow">
             <div className="text-center mb-12">
               <div className="flex justify-center items-center gap-3 mb-4">
                 <Pizza className="h-12 w-12 text-[#E63946]" />
@@ -111,6 +143,65 @@ export default async function HomePage() {
               </p>
             </div>
 
+            {/* Specials Section */}
+            {specials && specials.length > 0 && (
+              <div className="mb-16">
+                <div className="text-center mb-8">
+                  <div className="flex items-center justify-center gap-2">
+                    <Sparkles className="h-6 w-6 text-yellow-500" />
+                    <h2 className="text-3xl font-bold text-[#E63946]">
+                      Today's Specials
+                    </h2>
+                    <Sparkles className="h-6 w-6 text-yellow-500" />
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-7xl mx-auto">
+                  {specials.map((special) => (
+                    <div
+                      key={special.id}
+                      className="bg-white rounded-lg shadow-lg overflow-hidden transform transition-all duration-300 hover:-translate-y-1 hover:shadow-xl"
+                    >
+                      <div className="p-6">
+                        <h3 className="text-xl font-bold text-gray-900 mb-2">
+                          {special.name}
+                        </h3>
+                        <p className="text-gray-600 mb-4">
+                          {special.description}
+                        </p>
+                        <div className="flex justify-between items-center">
+                          <div className="flex items-center gap-2">
+                            {special.special_price && (
+                              <span className="text-2xl font-bold text-red-600">
+                                ${special.special_price.toFixed(2)}
+                              </span>
+                            )}
+                            {special.discount_percentage && (
+                              <span className="bg-red-100 text-red-700 px-2 py-1 rounded-full text-sm font-medium">
+                                {special.discount_percentage}% OFF
+                              </span>
+                            )}
+                          </div>
+                          <Link
+                            href={`/menu/specials/${special.id}`}
+                            className="inline-flex items-center text-red-600 hover:text-red-700 font-medium"
+                          >
+                            Order Now
+                            <span className="ml-2">→</span>
+                          </Link>
+                        </div>
+                        {special.end_date && (
+                          <div className="mt-4 text-sm text-gray-500">
+                            Valid until{" "}
+                            {new Date(special.end_date).toLocaleDateString()}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div className="text-center mb-12">
               <h1 className="text-4xl font-bold mb-4 text-[#0074D9]">
                 Our Menu
@@ -142,6 +233,48 @@ export default async function HomePage() {
               ))}
             </div>
           </div>
+
+          {/* Footer */}
+          <footer className="bg-red-700 text-white py-12 mt-auto">
+            <div className="container mx-auto px-4">
+              <div className="flex flex-col items-center">
+                <div className="text-2xl font-bold mb-6">@PhillyPizzaBueno</div>
+                <div className="flex gap-6 mb-8">
+                  <a
+                    href="https://instagram.com/phillypizzabueno"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:text-red-200 transition-colors"
+                    aria-label="Follow us on Instagram"
+                  >
+                    <Instagram size={24} />
+                  </a>
+                  <a
+                    href="https://facebook.com/phillypizzabueno"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:text-red-200 transition-colors"
+                    aria-label="Follow us on Facebook"
+                  >
+                    <Facebook size={24} />
+                  </a>
+                  <a
+                    href="https://tiktok.com/@phillypizzabueno"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:text-red-200 transition-colors"
+                    aria-label="Follow us on TikTok"
+                  >
+                    <Music2 size={24} />
+                  </a>
+                </div>
+                <div className="text-sm text-red-200">
+                  © {new Date().getFullYear()} PhillyPizzaBueno. All rights
+                  reserved.
+                </div>
+              </div>
+            </div>
+          </footer>
         </main>
       </Suspense>
     );
