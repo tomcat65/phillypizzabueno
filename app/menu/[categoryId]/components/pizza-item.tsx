@@ -13,6 +13,7 @@ interface PizzaItemProps {
       base_price: number;
       size: {
         size_inches: number;
+        size_name: string;
       };
     }>;
   };
@@ -36,18 +37,19 @@ export function PizzaItem({ pizza, categoryId }: PizzaItemProps) {
         <p className="text-sm text-gray-600">{pizza.description}</p>
       </CardHeader>
       <CardContent>
-        <div className="space-y-2">
+        <div className="space-y-3">
           {pizza.variants
             .sort((a, b) => a.size.size_inches - b.size.size_inches)
             .map((variant) => (
               <div
                 key={variant.id}
-                className="flex justify-between items-center py-1 border-b last:border-0"
+                className="flex justify-between items-center py-2 border-b last:border-0"
               >
                 <span className="text-sm font-medium">
-                  {variant.size.size_inches}" Pizza
+                  {variant.size.size_name}&nbsp;&nbsp;&nbsp;(
+                  {variant.size.size_inches}")
                 </span>
-                <span className="text-sm font-semibold">
+                <span className="text-sm font-semibold ml-16">
                   {formatPrice(variant.base_price)}
                 </span>
               </div>

@@ -159,7 +159,10 @@ export default async function CategoryPage({
     // Fetch all pizza-related data
     const [basePizzasResult, sizesResult, variantsResult] = await Promise.all([
       supabase.from("base_pizzas").select("*"),
-      supabase.from("pizza_sizes").select("*").order("size_inches"),
+      supabase
+        .from("pizza_sizes")
+        .select("id, size_inches, size_name")
+        .order("size_inches"),
       supabase.from("pizza_variants").select("*"),
     ]);
 
